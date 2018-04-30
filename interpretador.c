@@ -14,6 +14,9 @@
 //#define SIGUSR3 SIGWINCH
 //#define SIGUSR4 SIGURG
 
+#define SIGUSR3 SIGIO
+#define SIGUSR4 SIGURG
+
 FILE *exec;		//arquivo de entrada do interpretador
 
 
@@ -22,7 +25,7 @@ int pidEscalonador = -1;	//variavel p/ guardar o pid do inicializaEscalonador
 void inicializaEscalonador();		//inicia o inicializaEscalonador
 int inicializaPrograma(char *path);		//inicia o programa e retorna o pid
 void inicializaProcessos();		//parse do arquivo exec para chamar os programas e inserir no inicializaEscalonador
-void SigIntHandler(int signal);		//handler para SIGINT
+void IntHandler(int signal);		//handler para SIGINT
 
 
 int main (void) {
@@ -142,7 +145,7 @@ void inicializaProcessos(){
 			//snprintf(temp_name, MAX_NAME, " %d", pid);//insere o pid na memoria compartilhada
 			strcat(shmEscalonador, temp_name);
 			kill(pidEscalonador, SIGUSR1);//mandar sinal p/ insercao de processo com prioridade lida
-			printf("%s PR = %d\n enviado", nomeProg, arg1); fflush(stdout);
+			printf("%s PR = %d\n enviado!\n", nomeProg, arg1); fflush(stdout);
 		}
 		else if (prox == 'I') { //REAL TIME!
 			fscanf(exec, "=%d D=%d", &arg1, &arg2);
@@ -157,14 +160,14 @@ void inicializaProcessos(){
 			//snprintf(temp_name, MAX_NAME, " %d", pid);//insere o pid na memoria compartilhada
 			strcat(shmEscalonador, temp_name);
 			kill(pidEscalonador, SIGUSR2);//mandar sinal p/ insercao de processo com prioridade lida
-			printf(" %s I = %d D = %d\n enviado", nomeProg, arg1, arg2); fflush(stdout);
+			printf("%s I = %d D = %d\n enviado!\n", nomeProg, arg1, arg2); fflush(stdout);
 		}
-		else if (prox == '\n' || prox == 10) { //ROUND ROBIN!
+		else if (prox == '\n') { //ROUND ROBIN! || prox == 10
 			//pid = inicializaPrograma(nomeProg); //iniciar processo
 			//snprintf(temp_name, MAX_NAME, " %d", pid);//insere o pid na memoria compartilhada
 			strcat(shmEscalonador, temp_name);
 			kill(pidEscalonador, SIGUSR3);//mandar sinal p/ insercao de processo com prioridade lida
-			printf("%s\n enviado", nomeProg); fflush(stdout);
+			printf("%s enviado!\n", nomeProg); fflush(stdout);
 		}
 		
 		//printf("[INT]  %s %d %d %d\n", nomeProg, arg1, arg2, pid); fflush(stdout);
