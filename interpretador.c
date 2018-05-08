@@ -124,7 +124,7 @@ void inicializaProcessos(){
 	int arg1, arg2;		//argumentos para as chamadas ao inicializaEscalonador
 	
 	shmEscalonador = (char *) shmat(segmentoEscalonador, 0, 0);
-	
+	//shmEscalonador[0] = '\0';
 	//le do arquivo "Exec" e o nome do programa a ser chamado
 	while (fscanf(exec, " Exec %s", nomeProg) == 1) {
 		snprintf(shmEscalonador, MAX_NAME + 1, "%s", nomeProg);
@@ -165,6 +165,7 @@ void inicializaProcessos(){
 		else if (prox == '\n') { //ROUND ROBIN! || prox == 10
 			//pid = inicializaPrograma(nomeProg); //iniciar processo
 			//snprintf(temp_name, MAX_NAME, " %d", pid);//insere o pid na memoria compartilhada
+			temp_name[0] = '\0';
 			strcat(shmEscalonador, temp_name);
 			kill(pidEscalonador, SIGUSR3);//mandar sinal p/ insercao de processo com prioridade lida
 			printf("%s enviado!\n", nomeProg); fflush(stdout);

@@ -1,4 +1,4 @@
-Exec prog1 PR=0
-Exec prog2 PR=1
-Exec prog3 PR=3
-Exec prog4 PR=2
+Exec programa1
+Exec programa2 PR=0
+Exec programa3
+Exec programa4 PR=1

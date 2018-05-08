@@ -35,7 +35,7 @@ typedef struct process {
 
 char *segmentoInterpretador;
 
-Process realTIme[MAX_PROCESSES];
+Process realTime[MAX_PROCESSES];
 Process priorities[MAX_PROCESSES];
 Process roundRobin[MAX_PROCESSES];
 
@@ -160,14 +160,14 @@ void insertProcess_RealTime(int sinal) {
 	}
 	else {
 		for (i=0; i<countRealTimeProc; i++) { //checando conflitos com outros processos
-			if (new.arg1 >= realTIme[i].arg1 && new.arg1 < realTIme[i].arg1 + realTIme[i].arg2) {
+			if (new.arg1 >= realTime[i].arg1 && new.arg1 < realTime[i].arg1 + realTime[i].arg2) {
 				//printf(" Conflito no start do intervalo de execucao!\n", now);
 				//fflush(stdout);
 				printf("A execucao do Processo %s entra em conflito com outro processo\n", new.name);	
 				insert_quantity = 0;
 				break;
 			}
-			else if (end > realTIme[i].arg1 && end <= realTIme[i].arg1 + realTIme[i].arg2) {
+			else if (end > realTime[i].arg1 && end <= realTime[i].arg1 + realTime[i].arg2) {
 				//printf(" Conflito no start do intervalo de execucao!\n", now);
 				//fflush(stdout);
 				printf("A execucao do Processo %s entra em conflito com outro processo\n", new.name);
@@ -178,21 +178,22 @@ void insertProcess_RealTime(int sinal) {
 		}
 	}
 	
-	if (insert_quantity) {
-		new.pid = startProgram(new.name);
-	
-		//insert_quantity
-		realTIme[countRealTimeProc] = new;
-		countRealTimeProc++;
+	if (!insert_quantity)
+		return;
 
-		//ordena
-		qsort(realTIme, countRealTimeProc, sizeof(Process), sort_RealTime);
-		
-		/*for (i=0; i<countRealTimeProc; i++) {
-			printf(" realTIme[%d].start = %d realTIme[%d].end = %d\n", 
-			i, realTIme[i].arg1, i, realTIme[i].arg1+realTIme[i].arg2); fflush(stdout);
-		}*/
-	}
+	new.pid = startProgram(new.name);
+	
+	//insert_quantity
+	realTime[countRealTimeProc] = new;
+	countRealTimeProc++;
+
+	//ordena
+	qsort(realTime, countRealTimeProc, sizeof(Process), sort_RealTime);
+	
+	/*for (i=0; i<countRealTimeProc; i++) {
+		printf(" realTime[%d].start = %d realTime[%d].end = %d\n", 
+		i, realTime[i].arg1, i, realTime[i].arg1+realTime[i].arg2); fflush(stdout);
+	}*/
 }
 
 void insertProcess_Priorities(int sinal) {
@@ -213,7 +214,7 @@ void insertProcess_Priorities(int sinal) {
 	sscanf(segmentoInterpretador, " %s %d", new.name, &new.arg1);
 	printf("Recebeu %s com Prioridade = %d\n",  new.name, new.arg1);
 	//fflush(stdout);
-	if (new.arg1 < 1 || new.arg1 > 7) {
+	if (new.arg1 < 0 || new.arg1 > 7) {
 		printf("Valor de Prioridade Invalida!\n");
 		//fflush(stdout);
 	}
@@ -246,7 +247,7 @@ void insertProcess_RoundRobin (int sinal) {
 		return;
 	}
 	
-	new.method = PRIORITIES;
+	new.method = ROUNDROBIN;
 	sscanf(segmentoInterpretador, " %s", new.name);
 	printf(" Recebeu %s\n",  new.name);
 	fflush(stdout);
@@ -268,13 +269,15 @@ void endFile(int sinal) {
 int ProximaPolitica(int *process_index) {
 	int i;
 	
-	//se existem processos realTIme pro tempo atual, retorna REALTIME
+	//se existem processos realTime pro tempo atual, retorna REALTIME
 	if (countRealTimeProc != 0) {
 		for (i = 0; i < countRealTimeProc; i++) {
-			if (now >= realTIme[i].arg1 && now < realTIme[i].arg1 + realTIme[i].arg2) {
-				*process_index = i;
-				return REALTIME;
-			}
+			//if (now >= realTime[i].arg1 && now < realTime[i].arg1 + realTime[i].arg2) {
+			if (now < realTime[i].arg1 || now >= realTime[i].arg1 + realTime[i].arg2)
+				continue;
+
+			*process_index = i;
+			return REALTIME;
 		}
 	}
 	//se existem processos priorities, retorna PRIORITIES
@@ -321,10 +324,10 @@ void continueProcess(Process p) {
 void RealTime(int i) {
 	int terminou;
 
-	if (realTIme[i].pid != processoAtual.pid) {
+	if (realTime[i].pid != processoAtual.pid) {
 		if(processoAtual.pid != -1)
 			stopProcess(processoAtual);
-		processoAtual = realTIme[i];
+		processoAtual = realTime[i];
 		continueProcess(processoAtual);
 	}
 	
@@ -357,16 +360,28 @@ void Priority() {
 }
 
 void RoundRobin() {
+	int trigger = 50;
+	float msec = 0;
 	int terminou;
+	int i = 0;
 	
 	if (processoAtual.pid != roundRobin[0].pid) {
 		if(processoAtual.pid != -1)
 			stopProcess(processoAtual);
 		processoAtual = roundRobin[0];
-		continueProcess(processoAtual);
-		sleep(1);
+
+		clock_t before = clock();
+		
+		do{		
+			if(i == 0){
+				continueProcess(processoAtual);
+			}			
+			clock_t difference = clock() - before;
+			msec = difference * 1000 / CLOCKS_PER_SEC;
+			i++;	
+		}while(msec < trigger);		
+		printf("QUANTUM atingido = %f\n", msec/100);
 	}
-	
 	terminou = waitpid(processoAtual.pid, 0, WNOHANG);
 	if (terminou > 0) {
 		printf(" %s Encerrou!\n",  processoAtual.name); fflush(stdout);
@@ -391,7 +406,7 @@ void remove_Priorities (int index) {
 void remove_RealTime (int index) {
 	int i;
 	for (i = index; i<countRealTimeProc-1; i++) {
-		realTIme[i] = realTIme[i+1];
+		realTime[i] = realTime[i+1];
 	}
 	countRealTimeProc--;
 }
@@ -425,7 +440,7 @@ int startProgram(char *path) {
 		printf("[ESC] Erro ao criar process do programa %s!\n", path); fflush(stdout);
 		exit(-1);
 	}
-	else if (pid == 0) { //new programa
+	else if (pid == 0) { //new program
 		execve(prog, chamada, 0);
 		printf("[ESC] Erro ao iniciar o programa %s!\n", path); fflush(stdout);
 		exit(-2);
