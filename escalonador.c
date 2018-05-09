@@ -74,6 +74,9 @@ void RoundRobin();
 void remove_RealTime(int index);
 void remove_Priorities(int index);
 void remove_RoundRobin(int index);
+int alertConflict(char name);
+void finishProcess();
+void removeProcess(int index, Method method);
 
 int main (int argc, char *argv[]) {
 	int key;
@@ -156,13 +159,11 @@ void insertProcess_RealTime(int sinal) {
 		for (i=0; i<countRealTimeProc; i++) { 
 			//Verificando conflitos com outros processos Real Time de acordo com tempo de inicio
 			if (new.arg1 >= realTime[i].arg1 && new.arg1 < realTime[i].arg1 + realTime[i].arg2) {
-				printf("A execucao do Processo %s entra em conflito com outro processo\n", new.name);	
-				insert_quantity = 0;
+				insert_quantity = alertConflict(new.name);
 				break;
 			}//Verificando conflitos com outros processos Real Time de acordo com tempo de duração
 			else if (end > realTime[i].arg1 && end <= realTime[i].arg1 + realTime[i].arg2) {
-				printf("A execucao do Processo %s entra em conflito com outro processo\n", new.name);			
-				insert_quantity = 0;
+				insert_quantity = alertConflict(new.name);
 				break;
 			}
 		}
@@ -181,6 +182,12 @@ void insertProcess_RealTime(int sinal) {
 
 	//Ordena a Fila de Real Time
 	qsort(realTime, countRealTimeProc, sizeof(Process), sort_RealTime);
+}
+
+// Alerta conflito entre processos
+int alertConflict(char name) {
+	printf("A execucao do Processo %s entra em conflito com outro processo\n", name);
+	return 0;
 }
 
 
@@ -355,9 +362,8 @@ void RealTime(int i) {
 	if (finished <= 0)
 		return;
 
-	printf(" %s Encerrou!\n",  processoAtual.name);
-	processoAtual.method = processoAtual.pid = -1;
-	remove_RealTime(i);
+	finishProcess();
+	removeProcess(i, REALTIME);
 }
 
 
@@ -383,9 +389,14 @@ void Priority() {
 	if (finished <= 0)
 		return;
 
-	printf(" %s Encerrou!\n",  processoAtual.name);
+	finishProcess();
+	removeProcess(0, PRIORITIES);
+}
+
+// Encerra processo atual
+void finishProcess() {
+	printf(" %s Encerrou!\n", processoAtual.name);
 	processoAtual.method = processoAtual.pid = -1;
-	remove_Priorities(0);
 }
 
 
@@ -426,13 +437,23 @@ void RoundRobin() {
 	if (finished > 0) {
 		printf(" %s Encerrou!\n",  processoAtual.name); fflush(stdout);
 		processoAtual.method = processoAtual.pid = -1;
-		remove_RoundRobin(0);
+		removeProcess(0, ROUNDROBIN);
 	}//Senão, remove da Fila e o reinsere no final da Fila
 	else {
-		remove_RoundRobin(0);
+		removeProcess(0, ROUNDROBIN);
 		roundRobin[countRoundRobinProc] = processoAtual;
 		countRoundRobinProc++;
 	}
+}
+
+// Controlador de remoção de processo
+void removeProcess(int index, Method method) {
+	if (method == REALTIME)
+		remove_RealTime(index);
+	else if (method == PRIORITIES)
+		remove_Priorities(index);
+	else if (method == ROUNDROBIN)
+		remove_RoundRobin(index);
 }
 
 //Remove Processo da Fila de Real Time
@@ -461,5 +482,3 @@ void remove_RoundRobin (int index) {
 	}
 	countRoundRobinProc--;
 }
-
-
