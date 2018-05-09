@@ -352,11 +352,12 @@ void RealTime(int i) {
 	finished = waitpid(processoAtual.pid, 0, WNOHANG);
 	
 	//Se terminou, atualiza pid do processo e o remove da Fila
-	if (finished > 0) {
-		printf(" %s Encerrou!\n",  processoAtual.name);
-		processoAtual.method = processoAtual.pid = -1;
-		remove_RealTime(i);
-	}
+	if (finished <= 0)
+		return;
+
+	printf(" %s Encerrou!\n",  processoAtual.name);
+	processoAtual.method = processoAtual.pid = -1;
+	remove_RealTime(i);
 }
 
 
@@ -379,11 +380,12 @@ void Priority() {
 	finished = waitpid(processoAtual.pid, 0, WNOHANG);
 	
 	//Se terminou, atualiza pid do processo e o remove da Fila
-	if (finished > 0) {
-		printf(" %s Encerrou!\n",  processoAtual.name);
-		processoAtual.method = processoAtual.pid = -1;
-		remove_Priorities(0);
-	}
+	if (finished <= 0)
+		return;
+
+	printf(" %s Encerrou!\n",  processoAtual.name);
+	processoAtual.method = processoAtual.pid = -1;
+	remove_Priorities(0);
 }
 
 
