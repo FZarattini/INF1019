@@ -1,4 +1,7 @@
-Exec programa1
+Exec programa1 PR=0
 Exec programa2 PR=0
-Exec programa3
-Exec programa4 PR=1
+Exec programa3 I=2 D=10
+Exec programa4 I=4 D=10
+
+
+

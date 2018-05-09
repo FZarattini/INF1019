@@ -1,0 +1,512 @@
+Felipe Zarattini Miranda - 1220557
+Erick Macedo Pinto - 1112114
+
+Trabalho 1 - Escalonador de Processos
+
+O trabalho envolve implementar um interpretador de comandos que irá ler de um arquivo "exec.txt" comandos para execução de programas com parâmetros referentes à políticas de escalonamento pré definidas. Este interpretador deve ler o nome do programa a ser executado e seus argumentos e passar para o Escalonador, que deve então executar esses processos na ordem correta de acordo com suas políticas de escalonamento seguindo a ordem:
+
+Real Time >>> Prioridades >>> Round Robin
+
+Sendo que dentre os processos de escalonamento Prioridades, devem ser executados na ordem:
+
+Prioridades 0 >>> Prioridades 7
+
+Nosso programa consiste em ler o arquivo e enviar um a um os nomes dos pogramas e seus argumentos para a memória compartilhada entre o interpretador e o escalonador. Enquanto lê, o interpretador envia sinais, cujos handlers são funções do escalonador que irão inserir o processo enviado na sua fila correta (de Real Time, Prioridades ou Round Robin).
+O escalonador então, de posse das Filas preenchidas com os programas e seus argumentos irá ordenar as listas de Prioridades e Real Time e começar a executar estes programas na ordem pré definida.
+
+Mantemos controladas as quantidades de processos presentes em cada fila. Conforme os programas são executados até o fim, eles são removidos de suas filas. E quando todas as filas são zeradas, um sinal é enviado para que o Escalonador seja encerrado.
+
+Programas utilizados nos testes:
+
+Exec programa1 (CPU BOUND)
+Exec programa2 PR=2 (CPU BOUND)
+Exec programa3 (IO BOUND)
+Exec programa4 PR=0 (IO BOUND) 
+Exec programa5 I=10 D=5 (CPU BOUND)
+Exec programa6 PR=1 (IO BOUND)
+Exec programa7 I=20 D=3 (CPU BOUND)
+
+Teste 1: Prioridade maior sendo inserida antes de prioridade menor
+
+Exec programa1 PR=1
+Exec programa2 
+Exec programa3 PR=0
+Exec programa4 I=5 D=10
+
+Saída:
+
+Iniciando Escalonador!
+programa1 PR = 1 enviado!
+Recebeu programa1 com Prioridade = 1
+ Executando programa1
+programa2 enviado!
+ Recebeu programa2
+programa3 PR = 0 enviado!
+Recebeu programa3 com Prioridade = 0
+ Interrompendo programa1
+ Executando programa3
+Programa3 - IO bound
+programa4 I = 5 D = 10
+ enviado!
+Recebeu programa4 I = 5 D = 10
+Esperando IO
+ Interrompendo programa3
+ Executando programa4
+Programa4 - IO bound
+Esperando IO
+Esperando IO
+Esperando IO
+Esperando IO
+Esperando IO
+Esperando IO
+Esperando IO
+Esperando IO
+Esperando IO
+ Interrompendo programa4
+ Executando programa3
+Esperando IO
+Espera por IO terminou!
+ programa3 Encerrou!
+ Executando programa1
+ programa1 Encerrou!
+ Executando programa2
+QUANTUM atingido = 0.5 segundos
+ programa2 Encerrou!
+ Executando programa4
+Esperando IO
+Espera por IO terminou
+ programa4 Encerrou!
+Todos os Processos foram finalizados. Encerrando Escalonador!
+
+Teste 2: Alternância entre 2 processos Round Robin
+
+Exec programa1 PR=1
+Exec programa2 I=2 D=2
+Exec programa3 PR=0
+Exec programa4 
+Exec programa5
+
+
+Saída:
+
+Iniciando Escalonador!
+programa1 PR = 1 enviado!
+Recebeu programa1 com Prioridade = 1
+ Executando programa1
+programa2 I = 2 D = 2
+ enviado!
+Recebeu programa2 I = 2 D = 2
+ Interrompendo programa1
+ Executando programa2
+programa3 PR = 0 enviado!
+Recebeu programa3 com Prioridade = 0
+ Interrompendo programa2
+ Executando programa3
+Programa3 - IO bound
+programa4 enviado!
+ Recebeu programa4
+Programa3 Esperando IO
+programa5 enviado!
+ Recebeu programa5
+Programa3 Esperando IO
+Espera por IO terminou!
+ programa3 Encerrou!
+ Executando programa1
+ programa1 Encerrou!
+ Executando programa4
+Programa4 - IO bound
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+Programa4 Esperando IO
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+Programa4 Esperando IO
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+Programa4 Esperando IO
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+Programa4 Esperando IO
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+Programa4 Esperando IO
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+Programa4 Esperando IO
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+Programa4 Esperando IO
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+Programa4 Esperando IO
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa5
+ Executando programa4
+Programa4 Esperando IO
+QUANTUM atingido = 0.5 segundos
+ Interrompendo programa4
+ Executando programa5
+QUANTUM atingido = 0.5 segundos
+ programa5 Encerrou!
+ Executando programa4
+QUANTUM atingido = 0.5 segundos
+Programa4 Esperando IO
+Espera por IO terminou
+ programa4 Encerrou!
+ Executando programa2
+ programa2 Encerrou!
+Todos os Processos foram finalizados. Encerrando Escalonador!
+
+Teste 3: Dois programas com mesmo valor de Prioridade sendo executados na ordem de inserção
+
+Exec programa1 PR=0
+Exec programa2 PR=0
+Exec programa3 I=6 D=3
+
+Saída:
+
+Iniciando Escalonador!
+programa1 PR = 0 enviado!
+Recebeu programa1 com Prioridade = 0
+ Executando programa1
+programa2 PR = 0 enviado!
+Recebeu programa2 com Prioridade = 0
+programa3 I = 6 D = 3
+ enviado!
+Recebeu programa3 I = 6 D = 3
+ programa1 Encerrou!
+ Executando programa2
+ Interrompendo programa2
+ Executando programa3
+Programa3 - IO bound
+Programa3 Esperando IO
+Programa3 Esperando IO
+Espera por IO terminou!
+ programa3 Encerrou!
+ Executando programa2
+ programa2 Encerrou!
+Todos os Processos foram finalizados. Encerrando Escalonador!
+
+Teste 4: Valores inválidos de Real Time
+
+Exec programa1 PR=0
+Exec programa2 PR=0
+Exec programa3 I=50 D=11
+
+Saída:
+
+Iniciando Escalonador!
+programa1 PR = 0 enviado!
+Recebeu programa1 com Prioridade = 0
+ Executando programa1
+programa2 PR = 0 enviado!
+Recebeu programa2 com Prioridade = 0
+programa3 I = 50 D = 11
+ enviado!
+Recebeu programa3 I = 50 D = 11
+Tempo de execucao causara conflito com outros processos
+ programa1 Encerrou!
+ Executando programa2
+ programa2 Encerrou!
+Todos os Processos foram finalizados. Encerrando Escalonador!
+
+Teste 5: Valores inválidos de Real Time (um processo ser executado junto de outro)
+
+Exec programa1 PR=0
+Exec programa2 PR=0
+Exec programa3 I=2 D=10
+Exec programa4 I=4 D=10
+
+Saída:
+
+Iniciando Escalonador!
+programa1 PR = 0 enviado!
+Recebeu programa1 com Prioridade = 0
+ Executando programa1
+programa2 PR = 0 enviado!
+Recebeu programa2 com Prioridade = 0
+programa3 I = 2 D = 10
+ enviado!
+Recebeu programa3 I = 2 D = 10
+ Interrompendo programa1
+ Executando programa3
+Programa3 - IO bound
+programa4 I = 4 D = 10
+ enviado!
+Recebeu programa4 I = 4 D = 10
+A execucao do Processo programa4 entra em conflito com outro processo
+Programa3 Esperando IO
+Programa3 Esperando IO
+Espera por IO terminou!
+ programa3 Encerrou!
+ Executando programa1
+ programa1 Encerrou!
+ Executando programa2
+ programa2 Encerrou!
+Todos os Processos foram finalizados. Encerrando Escalonador!
+
+Conclusões:
+
+O escalonamento por Prioridades e Round Robin foram implementados corretamente, porém um problema é aparente na política Real Time.
+
+- Quando o Programa sendo escalonado por Real Time é IO Bound, ele não parece ser executado durante o tempo certo, sendo até mesmo interrompido no teste 2 pelo processo Round Robin que é inserido após ele. Ao fim da execução dos processos Round Robin, ele o processo Real Time foi retornado, mas ficou claro que o tempo que demorou para ser retomado não foi consistente com os parâmetros passados. 
+
+
+
+
+
+
+
+
+

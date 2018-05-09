@@ -11,7 +11,7 @@ int main()
 		while(i < 2)
 		{		    
 			sleep(1);
-		    	printf("Esperando IO\n");
+		    	printf("Programa3 Esperando IO\n");
 			i++;
 		}
 		printf("Espera por IO terminou!\n");
