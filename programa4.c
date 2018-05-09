@@ -4,16 +4,16 @@
 int main()
 {
 
-	int b = 10;
+	int i = 0;
 
 	printf("Programa4 - IO bound\n");
 	
-		while(b >= 1)
+		while(i < 10)
 		{
-			printf("Faltam %d segundos para o Programa4 IO Bound terminar.\n", b);
-			b--;
 			sleep(1);
+			printf("Esperando IO\n");
+			i++;
 		}
-		printf("Programa4 IO bound terminou\n");
+		printf("Espera por IO terminou\n");
 		return 0;
 }

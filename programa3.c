@@ -1,18 +1,19 @@
 #include <stdio.h>
 #include <unistd.h>
 
+//IO Bound
 int main()
 {
 
-	int b = 0;
+	int i = 0;
 
 	printf("Programa3 - IO bound\n");
-		while(b < 4)
-		{
-			b++;		    
+		while(i < 2)
+		{		    
 			sleep(1);
-		    printf("Programa3 - IO Bound sendo executado a %d segundos\n", b);
+		    	printf("Esperando IO\n");
+			i++;
 		}
-		printf("Programa3 - IO bound terminou\n");
+		printf("Espera por IO terminou!\n");
 	    return 0;
 }

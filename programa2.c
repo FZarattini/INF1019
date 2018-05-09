@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-//programa CPU Bound
+//CPU BOUND
 int main()
 {
 

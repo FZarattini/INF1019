@@ -8,24 +8,27 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 
-#define MAX_NAME 10		//tamanho maximo do nome dos programas
-#define SHMEM_MAX 1024		//tamanho do segmento de memoria compartilhada
+#define MAX_NAME 10		//Tamanho maximo do nome dos programas
+#define SHMEM_MAX 1024		//Tamanho do segmento de memoria compartilhada
 
-//#define SIGUSR3 SIGWINCH
-//#define SIGUSR4 SIGURG
-
+//Sinais que possuem como comportamento padrão não fazerem nada, apenas para que possamos usar os handlers
 #define SIGUSR3 SIGIO
 #define SIGUSR4 SIGURG
 
-FILE *exec;		//arquivo de entrada do interpretador
+//Arquivo de entrada do interpretador
+FILE *exec;
 
 
-int segmentoEscalonador = -1;	//segmento de memoria compartilhada p/ comunicacao com o inicializaEscalonador
-int pidEscalonador = -1;	//variavel p/ guardar o pid do inicializaEscalonador
-void inicializaEscalonador();		//inicia o inicializaEscalonador
-int inicializaPrograma(char *path);		//inicia o programa e retorna o pid
-void inicializaProcessos();		//parse do arquivo exec para chamar os programas e inserir no inicializaEscalonador
-void IntHandler(int signal);		//handler para SIGINT
+//Variáveis Globais
+int segmentoEscalonador = -1;	//Segmento de memoria compartilhada
+int pidEscalonador = -1;	//PID do Escalonador
+
+//Declaração das funções auxiliares
+void inicializaEscalonador();			
+void inicializaProcessos();
+
+//Handler		
+void IntHandler(int signal);	//Encerra Escalonador	
 
 
 int main (void) {
@@ -34,43 +37,42 @@ int main (void) {
 	char *call[3] = {"./inicializaEscalonador", NULL, NULL};
 	
 	segmentoEscalonador = shmget(IPC_PRIVATE, sizeof(char) * SHMEM_MAX, IPC_CREAT|IPC_EXCL|S_IRUSR|S_IWUSR);
-		
+	
+	//Sinal para a finalização do Escalonador	
 	signal(SIGINT, IntHandler);
 
 	exec = fopen ("exec.txt", "r");
 	if (exec == NULL) {
 		printf("Erro ao abrir arquivo!\n"); 
-		//fflush(stdout);
 		exit(-1);
 	}
-
-	//inicializaEscalonador();
 	
-	if ((pidEscalonador = fork()) < 0) {	//cria processo que executara o inicializaEscalonador
+	//Cria Processo que irá executar o Escalonador
+	if ((pidEscalonador = fork()) < 0) {
 		printf("Erro ao criar processo Escalonador\n"); 
-		//fflush(stdout);
 		exit(-3);
 	}
-	else if (pidEscalonador == 0) {		//inicializaEscalonador
+	else if (pidEscalonador == 0) {	
 		snprintf(pSegmentoEscalonador, MAX_NAME + 1 , "%d", segmentoEscalonador); // pSegmentoEscalonador aponta para SegmentoEscalonador e é passado para o escalonador
 		call[1] = pSegmentoEscalonador;
 		
-		//finalmente, comeca a execucao do inicializaEscalonador
+		//Executa Escalonador
 		execve("./escalonador", call, 0);
 		printf("Erro ao executar Escalonador!\n"); 
-		//fflush(stdout);
 		exit(-4);
 	}
 	
-	sleep(1); //espera a inicializacao do inicializaEscalonador
+	//Garante que Escalonador é inicializado antes de continuar
+	sleep(1); 
 	
 	if (pidEscalonador != -1) {
+		//Lê do arquivo os Programa e seus argumentos
 		inicializaProcessos();
+		//Espera Escalonador terminar
 		waitpid(pidEscalonador, &status, 0);
 	}
 	
-	printf("inicializaEscalonador encerrado. Finalizando interpretador.\n");
-	
+	//Fecha arquivo exec.txt
 	fclose(exec);
 	
 	shmctl(segmentoEscalonador, IPC_RMID, 0);
@@ -78,7 +80,7 @@ int main (void) {
 	return 0;
 }
 
-
+//Função que Encerra o Escalonador
 void IntHandler(int signal){
 	if(pidEscalonador != -1) {
 		kill(pidEscalonador, SIGINT);	//encerra Escalonador
@@ -90,116 +92,73 @@ void IntHandler(int signal){
 	exit(0);
 }
 
-/*
-void inicializaEscalonador(){
-	char pSegmentoEscalonador[MAX_NAME +1];
-	char *call[3] = {"./inicializaEscalonador", NULL, NULL};
-	
-	segmentoEscalonador = shmget(IPC_PRIVATE, sizeof(char) * SHMEM_MAX, IPC_CREAT|IPC_EXCL|S_IRUSR|S_IWUSR);
-	
-	if ((pidEscalonador = fork()) < 0) {	//cria processo que executara o inicializaEscalonador
-		printf("[INT] Erro ao criar processo do inicializaEscalonador!\n"); fflush(stdout);
-		exit(-3);
-	}
-	else if (pidEscalonador == 0) {		//inicializaEscalonador
-		//guardando em pSegmentoEscalonador a referencia p/ o segmento de memoria compartilhada p/ o inicializaEscalonador pegar
-		snprintf(pSegmentoEscalonador, MAX_NAME + 1 , "%d", segmentoEscalonador);
-		call[1] = pSegmentoEscalonador;
-		
-		//finalmente, comeca a execucao do inicializaEscalonador
-		execve("./inicializaEscalonador", call, 0);
-		printf("[INT] Erro ao executar inicializaEscalonador!\n"); fflush(stdout);
-		exit(-4);
-	}
-	
-	sleep(1); //espera a inicializacao do inicializaEscalonador
-}
-*/
 
+//Lê arquivo de entrada e envia os nomes dos programas e seus argumentos para a memória compartilhada, levantando os sinais
+//corretos para que o escalonador possa inserir os Processos nas Filas corretas.
 void inicializaProcessos(){
 	char nomeProg[MAX_NAME + 1];
 	char *shmEscalonador;
-	char temp_name[MAX_NAME];	//string auxiliar p/ guardar argumentos e pid
-	char prox;	//char auxiliar
-	int arg1, arg2;		//argumentos para as chamadas ao inicializaEscalonador
+	char temp_name[MAX_NAME];	
+	char prox;	
+	int arg1, arg2;		
 	
+	//Attach da área de memória compartilhada para a variável 
 	shmEscalonador = (char *) shmat(segmentoEscalonador, 0, 0);
-	//shmEscalonador[0] = '\0';
-	//le do arquivo "Exec" e o nome do programa a ser chamado
+	
+	//Lê o nome do Programa 
 	while (fscanf(exec, " Exec %s", nomeProg) == 1) {
-		snprintf(shmEscalonador, MAX_NAME + 1, "%s", nomeProg);
+		snprintf(shmEscalonador, MAX_NAME + 1, "%s", nomeProg); //Salva na memória compartilhada o nome do programa sem imprimir na saída
 		
-		fscanf(exec, "%c", &prox);
-		while (prox == ' ') {	//ou 32, para ignorar espaços
+		fscanf(exec, "%c", &prox); //Lê próximos caracteres um a um
+		while (prox == ' ') {
 			fscanf(exec, "%c", &prox);
 		}
 		
-		if (prox == 'P') {	//PRIORIDADE!
+		if (prox == 'P') {	//Política Prioridades
 			fscanf(exec, "R=%d", &arg1);
 			
-			//concatenando na memoria compartilhada o parametro p/ leitura do inicializaEscalonador
-			snprintf(temp_name, MAX_NAME, " %d", arg1); //salva temp_name no buffer sem printar
-			strcat(shmEscalonador, temp_name); // concantena temp_name e shmEscalonador para formar o parametro completo
+			//Concatena o argumento lido ao nome salvo na memória compartilhada
+			snprintf(temp_name, MAX_NAME, " %d", arg1); 
+			strcat(shmEscalonador, temp_name); 
 			
-			//pid = inicializaPrograma(nomeProg); //iniciar processo
-			//snprintf(temp_name, MAX_NAME, " %d", pid);//insere o pid na memoria compartilhada
 			strcat(shmEscalonador, temp_name);
-			kill(pidEscalonador, SIGUSR1);//mandar sinal p/ insercao de processo com prioridade lida
-			printf("%s PR = %d\n enviado!\n", nomeProg, arg1); fflush(stdout);
+
+			//Envia SIGUSR1 para que Escalonador saiba que deve inserir na Fila de Prioridades
+			kill(pidEscalonador, SIGUSR1);
+			printf("%s PR = %d enviado!\n", nomeProg, arg1); fflush(stdout);
 		}
-		else if (prox == 'I') { //REAL TIME!
+		else if (prox == 'I') { //Política Real Time
 			fscanf(exec, "=%d D=%d", &arg1, &arg2);
 			
-			//concatenando na memoria compartilhada os parametros p/ leitura do inicializaEscalonador
+			//Concatena o argumento lido ao nome salvo na memória compartilhada
 			snprintf(temp_name, MAX_NAME, " %d", arg1);
 			strcat(shmEscalonador, temp_name);
 			snprintf(temp_name, MAX_NAME, " %d", arg2);
 			strcat(shmEscalonador, temp_name);
-			
-			//pid = inicializaPrograma(nomeProg); //iniciar processo
-			//snprintf(temp_name, MAX_NAME, " %d", pid);//insere o pid na memoria compartilhada
 			strcat(shmEscalonador, temp_name);
-			kill(pidEscalonador, SIGUSR2);//mandar sinal p/ insercao de processo com prioridade lida
+
+			//Envia SIGUSR2 para que Escalonador saiba que deve inserir na Fila de Real Time
+			kill(pidEscalonador, SIGUSR2);
 			printf("%s I = %d D = %d\n enviado!\n", nomeProg, arg1, arg2); fflush(stdout);
 		}
-		else if (prox == '\n') { //ROUND ROBIN! || prox == 10
-			//pid = inicializaPrograma(nomeProg); //iniciar processo
-			//snprintf(temp_name, MAX_NAME, " %d", pid);//insere o pid na memoria compartilhada
-			temp_name[0] = '\0';
+		else if (prox == '\n') { //Política Round Robin
+			temp_name[0] = '\0'; //Limpamos a variável que estava vindo com lixo
+
+			//Não possui argumento
 			strcat(shmEscalonador, temp_name);
-			kill(pidEscalonador, SIGUSR3);//mandar sinal p/ insercao de processo com prioridade lida
+			
+			//Envia SIGUSR3 para que Escalonador saiba que deve inserir na Fila de Real Time
+			kill(pidEscalonador, SIGUSR3);
 			printf("%s enviado!\n", nomeProg); fflush(stdout);
 		}
 		
-		//printf("[INT]  %s %d %d %d\n", nomeProg, arg1, arg2, pid); fflush(stdout);
-		//printf("[INT] Iniciou %s\n", shmEscalonador); fflush(stdout);
+
 		sleep(1);
 	}
 	
+	//Envia SIGUSR4 para que Escalonador saiba que terminou a leitura do Arquivo
 	kill(pidEscalonador, SIGUSR4);
 	
+	//Detach da variável ligada à memória compartilhada
 	shmdt(shmEscalonador);
-}
-
-int inicializaPrograma(char *path) {
-	int pid;
-	char prog[MAX_NAME + 2] = "./";
-	char *call[3] = {NULL, NULL, NULL};
-	
-	strcat(prog, path);
-	call[0] = prog;
-	
-	if ((pid = fork()) < 0) { //cria processo que executara o programa
-		printf("Erro ao criar processo do programa %s!\n", path);
-		exit(-5);
-	}
-	else if (pid == 0) { //novo programa
-		execve(prog, call, 0);
-		printf("Erro ao iniciar o programa %s!\n", path);
-		exit(-6);
-	}
-	
-	kill(pid, SIGSTOP);
-	
-	return pid;
 }
