@@ -1,0 +1,15 @@
+DL-REQ . 1
+DC-REQ . 1 newDir 2 W R
+DL-REQ . 1
+WR-REQ ./newDir/teste.txt 12 teste 5 10 1 W W
+WR-REQ ./newDir/teste.txt 12 Banana 6 10 2 W W
+DL-REQ ./newDir 5
+WR-REQ ./newDir/teste.txt 12 teste1234testestetestetestetestetestetestetestetestetestetestetestetestetestetestetestetestetestetestetestetestetestetestetestetestetestetestetesteteste 30 10 2 W W
+RD-REQ ./newDir/teste.txt 12 25 0
+FI-REQ ./newDir/teste.txt 12
+DC-REQ ./newDir 1 anotherDir 2 W R
+WR-REQ ./newDir/anotherDir/teste2.txt 12 teste 5 10 2 W W
+FI-REQ ./newDir/anotherDir/teste2.txt 12
+DL-REQ ./newDir/anotherDir 14
+DR-REQ . 1 newDir 6 1
+DR-REQ . 1 newDir 6 2
