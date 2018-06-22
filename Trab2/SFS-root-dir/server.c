@@ -19,38 +19,39 @@
 #define BUFSIZE 1024
 
 
-static char* getFileInformation(char* path);
-static char* read_file(char* path, int *nrbytes, int offset);
-static int write_file(char* path, char* payload, int nrbytes, int offset, char* client, char* ownerPerm, char* otherPerm);
+char* getFileInformation(char* path);
+char* read_file(char* path, int *nrbytes, int offset);
+int write_file(char* path, char* payload, int nrbytes, int offset, char* client, char* ownerPerm, char* otherPerm);
 
-static char* list_directories(char* path);
-static char* create_directory(char* path, char* name, char* client, char* ownerPerm, char* otherPerm);
-static char* remove_directory(char* path, char* name, char* client);
+char* list_directories(char* path);
+char* create_directory(char* path, char* name, char* client, char* ownerPerm, char* otherPerm);
+char* remove_directory(char* path, char* name, char* client);
 
-static char* getDirectory();
-static int filter_files(const struct dirent* nameList);
-static void error(char *msg);
-static int delete_everything(const char *dir);
-static int check_file (char* filename);
-
+char* getDirectory();
+int filter_files(const struct dirent* nameList);
+void error(char *msg);
+int delete_everything(const char *dir);
+int check_file (char* filename);
 
 char* runCommand(char* command)
 {
 	char* params[10];
+	char* msgResposta[200];
 
 	int param_num = 0;
 	for(int i = 0; (params[i] = strsep(&command, " ")) != NULL; i++, param_num++)
 	{
 		if(i == 11)
-			return "ERROR: to many parameters!";
+			
+			return "Erro: Muitos parâmetros!\n";
 	}
 
 
-    printf("PARAM %d\n", param_num);
+    printf("Parâmetro %d\n", param_num);
 	if(!strcmp(params[0], "RD-REQ"))
 	{
 		if(param_num != 5)
-			return "ERROR: wrong number of parameters";
+			return "Erro: Quantidade de parâmetros inválida!\n";
 
 		char* path = params[1];
 		char* payload;
@@ -68,7 +69,7 @@ char* runCommand(char* command)
 
 		if (payload == NULL)
 		{
-			printf("Error reading file\n");
+			printf("Erro: Não foi possível carregar o arquivo!\n");
 			return NULL;
 		}
 
@@ -86,7 +87,7 @@ char* runCommand(char* command)
 		strcat(fullpath, " ");
 		strcat(fullpath, params[4]);
 
-		printf("Response: %s\n", fullpath);
+		printf("Resposta: %s\n", fullpath);
 
 		return fullpath;
 	}
@@ -94,7 +95,7 @@ char* runCommand(char* command)
 	if(!strcmp(params[0], "WR-REQ"))
 	{
 		if(param_num != 9)
-			return "ERROR: wrong number of parameters";
+			return "Erro: Quantidade de parâmetros inválida!\n";
 
 		char* path = params[1];
 		char* payload = params[3];
@@ -111,16 +112,16 @@ char* runCommand(char* command)
 		fullpath[0] = '\0';
 		
 		nrbytes = write_file(path, payload, nrbytes, offset, client, owner, others);
-		printf("Bytes Written Response: %d\n", nrbytes);
+		printf("Quantidade de bytes escritos: %d\n", nrbytes);
 
 		if (nrbytes == -1)
 		{
-			printf("Error writing in file\n");
-			return "Error writing in file\n";
+			printf("Erro ao tentar escrever no arquivo!\n");
+			return "Erro ao tentar escrever no arquivo!\n";
 		}
 		if(nrbytes == -3) {
-			printf("ERROR: permission denied\n");
-			return "ERROR: permission denied\n";
+			printf("Erro: Acesso negado!\n");
+			return "Erro: Acesso negado!\n";
 		}
 
 		snprintf(lenPath, 20, "%lu", strlen(path));
@@ -135,7 +136,7 @@ char* runCommand(char* command)
 		strcat(fullpath, " ");
 		strcat(fullpath, params[4]);
 
-		printf("Response: %s\n", fullpath);
+		printf("Resposta: %s\n", fullpath);
 
 		return fullpath;
 	}
@@ -152,7 +153,7 @@ char* runCommand(char* command)
 
 		char* temp = getFileInformation(path);
 		if(temp == NULL) {
-			return "ERROR: could not get file info";
+			return "Erro: Não foi possível acessar as informações do arquivo!\n";
 		}
 		strcat(rep, temp);
 		
@@ -162,7 +163,7 @@ char* runCommand(char* command)
 	if(!strcmp(params[0], "DC-REQ"))
 	{
 		if(param_num != 7)
-			return "ERROR: wrong number of parameters\n";
+			return "Erro: Quantidade de parâmetros inválida!\n";
 
 		char* path = params[1];
 		char* name = params[3];
@@ -179,8 +180,8 @@ char* runCommand(char* command)
 		answer = create_directory(path, name, client, owner, others);
 
 		if(answer == NULL) {
-			printf("Error creating directory\n");
-			return "Error creating directory\n";
+			printf("Erro: Não foi possível criar o diretório!\n");
+			return "Erro: Não foi possível criar o diretório!\n";
 		}
 
 		snprintf(len, 20, "%lu", strlen(answer));
@@ -196,7 +197,7 @@ char* runCommand(char* command)
 	if(!strcmp(params[0], "DR-REQ"))
 	{
 		if(param_num != 6)
-			return "ERROR: wrong number of parameters";
+			return "Erro: Quantidade de parâmetros inválida!\n";
 
 		char* path   = params[1];
 		char* name   = params[3];
@@ -210,7 +211,7 @@ char* runCommand(char* command)
 
 		answer = remove_directory(path, name, client);
 
-		printf("Answer: %s\n", answer);
+		printf("Resposta: %s\n", answer);
 
 		if (answer == NULL)
 		{
@@ -221,7 +222,7 @@ char* runCommand(char* command)
 			snprintf(len, 20, "%lu", strlen(path));
 		}
 
-		printf("Tamanho do path: %s\n", len);
+		printf("Tamanho do caminho do diretório: %s\n", len);
 		
 		strcpy(fullpath, "DR-REP ");
 		strcat(fullpath, path);
@@ -244,102 +245,11 @@ char* runCommand(char* command)
 		return rep;
 	}
 	
-	printf("UNRECOGNIZED COMMAND!!\n");
+	printf("Comando não reconhecido!\n");
 	return NULL;
 }
 
-static void server_execute(int port)
-{
-    int sockfd; /* socket */
-    int portno; /* port to listen on */
-    unsigned int clientlen; /* byte size of client's address */
-    struct sockaddr_in serveraddr; /* server's addr */
-    struct sockaddr_in clientaddr; /* client addr */
-    struct hostent *hostp; /* client host info */
-    char buf[BUFSIZE]; /* message buf */
-    char *hostaddrp; /* dotted decimal host addr string */
-    int optval; /* flag value for setsockopt */
-    int n; /* message byte size */
-    
-    portno = port;
-    
-    /* 
-     * socket: create the parent socket 
-     */
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd < 0) 
-        error("ERROR opening socket");
-
-    /* setsockopt: Handy debugging trick that lets 
-     * us rerun the server immediately after we kill it; 
-     * otherwise we have to wait about 20 secs. 
-     * Eliminates "ERROR on binding: Address already in use" error. 
-     */
-    optval = 1;
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const void *)&optval , sizeof(int));
-
-    /*
-     * build the server's Internet address
-     */
-    bzero((char *) &serveraddr, sizeof(serveraddr));
-    serveraddr.sin_family = AF_INET;
-    serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serveraddr.sin_port = htons((unsigned short)portno);
-
-    /* 
-     * bind: associate the parent socket with a port 
-     */
-    if (bind(sockfd, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0) 
-        error("ERROR on binding");
-
-    /* 
-     * main loop: wait for a datagram, then echo it
-     */
-    clientlen = sizeof(clientaddr);
-    while (1) 
-    {
-        /*
-         * recvfrom: receive a UDP datagram from a client
-         */
-        bzero(buf, BUFSIZE);
-        n = recvfrom(sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &clientaddr, &clientlen);
-        if (n < 0)
-            error("ERROR in recvfrom");
-        
-        /* 
-         * gethostbyaddr: determine who sent the datagram
-         */
-        hostp = gethostbyaddr((const char *)&clientaddr.sin_addr.s_addr, sizeof(clientaddr.sin_addr.s_addr), AF_INET);
-        if (hostp == NULL)
-            error("ERROR on gethostbyaddr");
-
-        hostaddrp = inet_ntoa(clientaddr.sin_addr);
-        if (hostaddrp == NULL)
-            error("ERROR on inet_ntoa\n");
-    
-        printf("Server received datagram from %s (%s)\n",  hostp->h_name, hostaddrp);
-        printf("Server received %lu/%d bytes: %s\n", strlen(buf), n, buf);
-        
-        if(buf[0] == '#')
-        	continue;
-
-        char* reply;
-        if( !(reply = runCommand(strdup(buf)))) {
-            reply = strdup("Error: could not understand command!");
-        }
-        printf("Reply: %s\n", reply);
-        
-        /* 
-         * sendto: echo the input back to the client 
-         */
-        n = sendto(sockfd, reply, strlen(reply) + 1, 0, (struct sockaddr *) &clientaddr, clientlen);
-        if (n < 0) 
-            error("ERROR in sendto");
-        printf("Answer sent\n");
-    }
-}
-
-static char* read_file(char* path, int* nrbytes, int offset)
+char* read_file(char* path, int* nrbytes, int offset)
 {
 	char *payload = (char*)malloc(BUFSIZE * sizeof(char));
 	int descriptor;
@@ -369,7 +279,7 @@ static char* read_file(char* path, int* nrbytes, int offset)
 	return payload;
 }
 
-static int write_file(char* path, char* payload, int nrbytes, int offset, char* client, char* ownerPerm, char* otherPerm)
+int write_file(char* path, char* payload, int nrbytes, int offset, char* client, char* ownerPerm, char* otherPerm)
 {
 	struct stat buf;
 	int descriptor;
@@ -489,7 +399,7 @@ static int write_file(char* path, char* payload, int nrbytes, int offset, char* 
 	return written;
 }
 
-static char* getFileInformation(char* path)
+char* getFileInformation(char* path)
 {
 	//Client
 	char* pathdup = strdup(path);
@@ -544,7 +454,7 @@ static char* getFileInformation(char* path)
 	return ret;
 }
 
-static char* create_directory(char* path, char* name, char* client, char* ownerPerm, char* otherPerm)
+char* create_directory(char* path, char* name, char* client, char* ownerPerm, char* otherPerm)
 {
 	struct stat st = {0};
 	char* fullpath = (char*)malloc((strlen(path) + strlen(name) + 1) * sizeof(char));
@@ -591,7 +501,7 @@ static char* create_directory(char* path, char* name, char* client, char* ownerP
 	return fullpath;
 }
 
-static char* remove_directory(char* path, char* name, char* client)
+char* remove_directory(char* path, char* name, char* client)
 {
 	char* fullpath = (char*)malloc((strlen(path) + strlen(name) + 1) * sizeof(char));
 
@@ -645,7 +555,7 @@ static char* remove_directory(char* path, char* name, char* client)
 	return fullpath;
 }
 
-static char* list_directories(char* path)
+char* list_directories(char* path)
 {
 	char* fullpath = getDirectory();
 	int count;
@@ -676,7 +586,7 @@ static char* list_directories(char* path)
 	return ret;
 }
 
-static char* getDirectory()
+char* getDirectory()
 {
 	char* currentDir = (char*)malloc(BUFFER*sizeof(char)) ;
 
@@ -689,7 +599,7 @@ static char* getDirectory()
 	return currentDir;
 }
 
-static int filter_files(const struct dirent* nameList)
+int filter_files(const struct dirent* nameList)
 {
 	if ((strcmp(nameList->d_name, ".") == 0) || (strcmp(nameList->d_name, "..") == 0) || (nameList->d_name[0] == '.'))  
 		return 0; 
@@ -697,19 +607,19 @@ static int filter_files(const struct dirent* nameList)
 		return 1;
 }
 
-static void error(char *msg)
+void error(char *msg)
 {
     perror(msg);
     exit(1);
 }
 
-static int check_file (char* filename)
+int check_file (char* filename)
 {
   struct stat buffer;   
   return stat(filename, &buffer) == 0;
 }
 
-static int delete_everything(const char *dir) //talvez suma
+int delete_everything(const char *dir) //talvez suma
 {
     int ret = 0;
     FTS *ftsp = NULL;
@@ -755,6 +665,97 @@ static int delete_everything(const char *dir) //talvez suma
     }
 
     return ret;
+}
+
+void server_execute(int port)
+{
+    int sockfd; /* socket */
+    int portno; /* port to listen on */
+    unsigned int clientlen; /* byte size of client's address */
+    struct sockaddr_in serveraddr; /* server's addr */
+    struct sockaddr_in clientaddr; /* client addr */
+    struct hostent *hostp; /* client host info */
+    char buf[BUFSIZE]; /* message buf */
+    char *hostaddrp; /* dotted decimal host addr string */
+    int optval; /* flag value for setsockopt */
+    int n; /* message byte size */
+    
+    portno = port;
+    
+    /* 
+     * socket: create the parent socket 
+     */
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockfd < 0) 
+        error("ERROR opening socket");
+
+    /* setsockopt: Handy debugging trick that lets 
+     * us rerun the server immediately after we kill it; 
+     * otherwise we have to wait about 20 secs. 
+     * Eliminates "ERROR on binding: Address already in use" error. 
+     */
+    optval = 1;
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const void *)&optval , sizeof(int));
+
+    /*
+     * build the server's Internet address
+     */
+    bzero((char *) &serveraddr, sizeof(serveraddr));
+    serveraddr.sin_family = AF_INET;
+    serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    serveraddr.sin_port = htons((unsigned short)portno);
+
+    /* 
+     * bind: associate the parent socket with a port 
+     */
+    if (bind(sockfd, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0) 
+        error("ERROR on binding");
+
+    /* 
+     * main loop: wait for a datagram, then echo it
+     */
+    clientlen = sizeof(clientaddr);
+    while (1) 
+    {
+        /*
+         * recvfrom: receive a UDP datagram from a client
+         */
+        bzero(buf, BUFSIZE);
+        n = recvfrom(sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &clientaddr, &clientlen);
+        if (n < 0)
+            error("ERROR in recvfrom");
+        
+        /* 
+         * gethostbyaddr: determine who sent the datagram
+         */
+        hostp = gethostbyaddr((const char *)&clientaddr.sin_addr.s_addr, sizeof(clientaddr.sin_addr.s_addr), AF_INET);
+        if (hostp == NULL)
+            error("ERROR on gethostbyaddr");
+
+        hostaddrp = inet_ntoa(clientaddr.sin_addr);
+        if (hostaddrp == NULL)
+            error("ERROR on inet_ntoa\n");
+    
+        printf("Server received datagram from %s (%s)\n",  hostp->h_name, hostaddrp);
+        printf("Server received %lu/%d bytes: %s\n", strlen(buf), n, buf);
+        
+        if(buf[0] == '#')
+        	continue;
+
+        char* reply;
+        if( !(reply = runCommand(strdup(buf)))) {
+            reply = strdup("Error: Comando não reconhecido!\n");
+        }
+        printf("Reply: %s\n", reply);
+        
+        /* 
+         * sendto: echo the input back to the client 
+         */
+        n = sendto(sockfd, reply, strlen(reply) + 1, 0, (struct sockaddr *) &clientaddr, clientlen);
+        if (n < 0) 
+            error("ERROR in sendto");
+        printf("Resposta enviada!\n");
+    }
 }
 
 int main(int argc, char **argv)
