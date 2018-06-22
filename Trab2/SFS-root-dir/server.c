@@ -15,23 +15,24 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#define BUFFER  100
+#define BUFFER  250
 #define BUFSIZE 1024
 
 
-static char* fileRead(char* path, int *nrbytes, int offset);
-static int fileWrite(char* path, char* payload, int nrbytes, int offset, char* client, char* ownerPerm, char* otherPerm);
-static char* fileInfo(char* path);
+static char* getFileInformation(char* path);
+static char* read_file(char* path, int *nrbytes, int offset);
+static int write_file(char* path, char* payload, int nrbytes, int offset, char* client, char* ownerPerm, char* otherPerm);
 
-static char* dirCreate(char* path, char* name, char* client, char* ownerPerm, char* otherPerm);
-static char* dirRemove(char* path, char* name, char* client);
-static char* dirList(char* path);
+static char* list_directories(char* path);
+static char* create_directory(char* path, char* name, char* client, char* ownerPerm, char* otherPerm);
+static char* remove_directory(char* path, char* name, char* client);
 
 static char* getDirectory();
-static int filesFilter(const struct dirent* nameList);
+static int filter_files(const struct dirent* nameList);
 static void error(char *msg);
-static int fileExist (char* filename);
-static int recursive_delete(const char *dir);
+static int delete_everything(const char *dir);
+static int check_file (char* filename);
+
 
 char* runCommand(char* command)
 {
@@ -44,7 +45,6 @@ char* runCommand(char* command)
 			return "ERROR: to many parameters!";
 	}
 
-	//return NULL;
 
     printf("PARAM %d\n", param_num);
 	if(!strcmp(params[0], "RD-REQ"))
@@ -53,7 +53,6 @@ char* runCommand(char* command)
 			return "ERROR: wrong number of parameters";
 
 		char* path = params[1];
-		// int len = atoi(params[2]);
 		char* payload;
 		int nrbytes = atoi(params[3]);
 		int offset = atoi(params[4]);
@@ -64,7 +63,7 @@ char* runCommand(char* command)
 
 		fullpath[0] = '\0';
 		
-		payload = fileRead(path, &nrbytes, offset);
+		payload = read_file(path, &nrbytes, offset);
 		printf("Payload: %s\n", payload);
 
 		if (payload == NULL)
@@ -89,18 +88,15 @@ char* runCommand(char* command)
 
 		printf("Response: %s\n", fullpath);
 
-		// path(string), strlen(int), payload (string), nrbytes lidos(int), offset igual ao do R-REQ(int)
 		return fullpath;
 	}
 	
 	if(!strcmp(params[0], "WR-REQ"))
 	{
-		//return NULL;
 		if(param_num != 9)
 			return "ERROR: wrong number of parameters";
 
 		char* path = params[1];
-		// int len = atoi(params[2]);
 		char* payload = params[3];
 		int nrbytes = atoi(params[4]);
 		int offset = atoi(params[5]);
@@ -114,7 +110,7 @@ char* runCommand(char* command)
 
 		fullpath[0] = '\0';
 		
-		nrbytes = fileWrite(path, payload, nrbytes, offset, client, owner, others);
+		nrbytes = write_file(path, payload, nrbytes, offset, client, owner, others);
 		printf("Bytes Written Response: %d\n", nrbytes);
 
 		if (nrbytes == -1)
@@ -140,8 +136,7 @@ char* runCommand(char* command)
 		strcat(fullpath, params[4]);
 
 		printf("Response: %s\n", fullpath);
-		
-		// path (string), strlen(int), payload(string vazio), nrbytes escritos (int), offset igual ao do W-REQ(int)
+
 		return fullpath;
 	}
 	
@@ -155,13 +150,12 @@ char* runCommand(char* command)
 		strcat(rep, path);
 		strcat(rep, " ");
 
-		char* temp = fileInfo(path);
+		char* temp = getFileInformation(path);
 		if(temp == NULL) {
 			return "ERROR: could not get file info";
 		}
 		strcat(rep, temp);
 		
-		// path (string), strlen(int), owner(int), permissions (2char), filelength (int)
 		return rep;
 	}
 	
@@ -182,7 +176,7 @@ char* runCommand(char* command)
 
 		fullpath[0] = '\0';
 		
-		answer = dirCreate(path, name, client, owner, others);
+		answer = create_directory(path, name, client, owner, others);
 
 		if(answer == NULL) {
 			printf("Error creating directory\n");
@@ -196,7 +190,6 @@ char* runCommand(char* command)
 		strcat(fullpath, " ");
 		strcat(fullpath, len);
 		
-		// path(string), strlen(int)
 		return fullpath;
 	}
 
@@ -215,7 +208,7 @@ char* runCommand(char* command)
 
 		fullpath[0] = '\0';
 
-		answer = dirRemove(path, name, client);
+		answer = remove_directory(path, name, client);
 
 		printf("Answer: %s\n", answer);
 
@@ -235,7 +228,6 @@ char* runCommand(char* command)
 		strcat(fullpath, " ");
 		strcat(fullpath, len);
 
-		// path(string), strlen(int)
 		return fullpath;
 	}
 
@@ -247,10 +239,8 @@ char* runCommand(char* command)
 
 		strcpy(rep, "DL-REP ");
 		strcat(rep, "\n");
-		strcat(rep, dirList(path));
+		strcat(rep, list_directories(path));
 		
-		
-		// allfilenames (string), fstlstpositions (array[40] of struct {int, int}), nrnames (int)
 		return rep;
 	}
 	
@@ -258,7 +248,7 @@ char* runCommand(char* command)
 	return NULL;
 }
 
-static void runServer(int port)
+static void server_execute(int port)
 {
     int sockfd; /* socket */
     int portno; /* port to listen on */
@@ -349,31 +339,13 @@ static void runServer(int port)
     }
 }
 
-
-int main(int argc, char **argv)
-{
-    /* 
-     * check command line arguments 
-     */
-    if (argc != 2) 
-    {
-        fprintf(stderr, "usage: %s <port>\n", argv[0]);
-        exit(1);
-    }
-    int portno = atoi(argv[1]);
-
-    runServer(portno);
-
-	return 0;
-}
-
-static char* fileRead(char* path, int* nrbytes, int offset)
+static char* read_file(char* path, int* nrbytes, int offset)
 {
 	char *payload = (char*)malloc(BUFSIZE * sizeof(char));
 	int descriptor;
 	int bytes;
 
-	printf("fileRead -- path: %s, nrbytes: %d, offset: %d\n", path, *nrbytes, offset);
+	printf("read_file -- path: %s, nrbytes: %d, offset: %d\n", path, *nrbytes, offset);
 
 	descriptor = open(path, O_RDONLY);
 
@@ -397,7 +369,7 @@ static char* fileRead(char* path, int* nrbytes, int offset)
 	return payload;
 }
 
-static int fileWrite(char* path, char* payload, int nrbytes, int offset, char* client, char* ownerPerm, char* otherPerm)
+static int write_file(char* path, char* payload, int nrbytes, int offset, char* client, char* ownerPerm, char* otherPerm)
 {
 	struct stat buf;
 	int descriptor;
@@ -456,13 +428,8 @@ static int fileWrite(char* path, char* payload, int nrbytes, int offset, char* c
 
 	}
 	close(dirDescriptor);
-
-
-
-	//
-
 	
-	if (!fileExist(path))
+	if (!check_file(path))
 	{
 		descriptor = open(path, O_WRONLY | O_CREAT, 0666);
 
@@ -493,30 +460,6 @@ static int fileWrite(char* path, char* payload, int nrbytes, int offset, char* c
 				return -3;
 			}
 		}
-
-		// fileBufAux[0] = '\0';
-
-		// char dirPath[20];
-		// strcpy(dirPath, path);
-		// strcat(dirPath, ".directory");
-
-		// int dirDescriptor = open(dirPath, O_WRONLY);
-		// rw = pread(dirDescriptor, fileBufAux, 2*strlen(fileBuf), 0);
-		// printf("Lendo arquivo de auth: %d / valor: %s\n", rw, fileBufAux);
-		// close(dirDescriptor);
-
-		// for(int i = 0; (params[i] = strsep(&fileBufAux, " ")) != NULL; i++);
-
-		// if (params[2][0] == 'R') {
-		// 	if(strcmp(params[0], client) != 0) {
-		// 		close(descriptor);
-		// 		return -3;
-		// 	}
-		// }
-
-
-		// free(fileBuf);
-		// free(fileBufAux);
 	}
 
 	if (nrbytes == 0)
@@ -535,7 +478,7 @@ static int fileWrite(char* path, char* payload, int nrbytes, int offset, char* c
 
 	offset = size < offset ? size : offset;
 
-	printf("fileWrite -- path: %s, payload: %s, nrbytes: %d, offset: %d\n", path, payload, nrbytes, offset);
+	printf("write_file -- path: %s, payload: %s, nrbytes: %d, offset: %d\n", path, payload, nrbytes, offset);
 
 	written = pwrite(descriptor, payload, nrbytes, offset);
 
@@ -546,7 +489,7 @@ static int fileWrite(char* path, char* payload, int nrbytes, int offset, char* c
 	return written;
 }
 
-static char* fileInfo(char* path)
+static char* getFileInformation(char* path)
 {
 	//Client
 	char* pathdup = strdup(path);
@@ -571,7 +514,7 @@ static char* fileInfo(char* path)
 	printf("%d\n", strcmp(pathWithDot, "./newDir/.teste.txt"));
 
 	if(pathWithDot[strlen(pathWithDot)] == '\n') {
-		printf("bananas\n");
+		printf("bananas\n"); //Debug, apagar depois
 	}
 	
 
@@ -589,7 +532,7 @@ static char* fileInfo(char* path)
 	stat(path, &st);
 
 	char sz[20];
-	snprintf(sz, 19, "%lld", st.st_size);
+	snprintf(sz, 19, "%ld", st.st_size);
 	
 	strcat(ret, " ");
 	strcat(ret, sz);
@@ -601,7 +544,7 @@ static char* fileInfo(char* path)
 	return ret;
 }
 
-static char* dirCreate(char* path, char* name, char* client, char* ownerPerm, char* otherPerm)
+static char* create_directory(char* path, char* name, char* client, char* ownerPerm, char* otherPerm)
 {
 	struct stat st = {0};
 	char* fullpath = (char*)malloc((strlen(path) + strlen(name) + 1) * sizeof(char));
@@ -610,7 +553,7 @@ static char* dirCreate(char* path, char* name, char* client, char* ownerPerm, ch
 	mode_t permissao = S_IRWXU | S_IROTH | S_IWOTH | S_IXOTH;
 	int descriptor;
 
-	printf("dirCreate -- path: %s, name: %s, fullpath: %s\n", path, name, fullpath);
+	printf("create_directory -- path: %s, name: %s, fullpath: %s\n", path, name, fullpath);
 
 	strcpy(fullpath, path);
 	strcat(fullpath, "/");
@@ -648,7 +591,7 @@ static char* dirCreate(char* path, char* name, char* client, char* ownerPerm, ch
 	return fullpath;
 }
 
-static char* dirRemove(char* path, char* name, char* client)
+static char* remove_directory(char* path, char* name, char* client)
 {
 	char* fullpath = (char*)malloc((strlen(path) + strlen(name) + 1) * sizeof(char));
 
@@ -685,7 +628,7 @@ static char* dirRemove(char* path, char* name, char* client)
 	free(auth);
 	//
 
-	printf("dirRemove -- path: %s, name: %s\n", path, name);
+	printf("remove_directory -- path: %s, name: %s\n", path, name);
 
 	strcpy(fullpath, path);
 	strcat(fullpath, "/");
@@ -693,7 +636,7 @@ static char* dirRemove(char* path, char* name, char* client)
 
 	printf("fullpath: %s\n", fullpath);
 
-	if (recursive_delete(fullpath) == -1)
+	if (delete_everything(fullpath) == -1)
 	{
 		printf("Erro remover diretorio!\n");
 		return NULL;
@@ -702,21 +645,21 @@ static char* dirRemove(char* path, char* name, char* client)
 	return fullpath;
 }
 
-static char* dirList(char* path)
+static char* list_directories(char* path)
 {
 	char* fullpath = getDirectory();
 	int count;
 	struct dirent** nameList;
 	char* ret = malloc(BUFSIZE*(sizeof(char))); ret[0] = '\0';
 
-	printf("dirList -- path: %s\n", path);
+	printf("list_directories -- path: %s\n", path);
 
 	if(path[1] == '/')
 		strcat(fullpath, &path[1]);
 
 	printf("%s\n", fullpath);
 
-	count = scandir(fullpath, &nameList, filesFilter, alphasort);
+	count = scandir(fullpath, &nameList, filter_files, alphasort);
 	//quantidade de arquivos no diretorio
 
 	printf("%d\n", count);
@@ -746,7 +689,7 @@ static char* getDirectory()
 	return currentDir;
 }
 
-static int filesFilter(const struct dirent* nameList)
+static int filter_files(const struct dirent* nameList)
 {
 	if ((strcmp(nameList->d_name, ".") == 0) || (strcmp(nameList->d_name, "..") == 0) || (nameList->d_name[0] == '.'))  
 		return 0; 
@@ -760,13 +703,13 @@ static void error(char *msg)
     exit(1);
 }
 
-static int fileExist (char* filename)
+static int check_file (char* filename)
 {
   struct stat buffer;   
   return stat(filename, &buffer) == 0;
 }
 
-static int recursive_delete(const char *dir)
+static int delete_everything(const char *dir) //talvez suma
 {
     int ret = 0;
     FTS *ftsp = NULL;
@@ -780,7 +723,6 @@ static int recursive_delete(const char *dir)
     }
 
     while ((curr = fts_read(ftsp))) {
-    	printf("dentro do while\n");
         switch (curr->fts_info) {
         case FTS_NS:
         case FTS_DNR:
@@ -813,4 +755,21 @@ static int recursive_delete(const char *dir)
     }
 
     return ret;
+}
+
+int main(int argc, char **argv)
+{
+    /* 
+     * check command line arguments 
+     */
+    if (argc != 2) 
+    {
+        fprintf(stderr, "usage: %s <port>\n", argv[0]);
+        exit(1);
+    }
+    int portno = atoi(argv[1]);
+
+    server_execute(portno);
+
+    return 0;
 }
