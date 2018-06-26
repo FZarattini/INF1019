@@ -546,13 +546,11 @@ char* remove_directory(char* path, char* name, char* client)
 
 	printf("fullpath: %s\n", fullpath);
 
-	if (delete_everything(fullpath) == -1)
-	{
-		printf("Erro remover diretorio!\n");
-		return NULL;
-	}
-
-	return fullpath;
+	if (delete_everything(fullpath) != -1)
+		return fullpath;
+	
+	printf("Erro remover diretorio!\n");
+	return NULL;
 }
 
 char* list_directories(char* path)
@@ -590,13 +588,11 @@ char* getDirectory()
 {
 	char* currentDir = (char*)malloc(BUFFER*sizeof(char)) ;
 
-	if (getcwd(currentDir, BUFFER) == NULL )
-	{
-		printf("Error getting path\n"); 
-		exit(0);
-	}
+	if (getcwd(currentDir, BUFFER) != NULL)
+		return currentDir;
 
-	return currentDir;
+	printf("Error getting path\n"); 
+	exit(0);
 }
 
 int filter_files(const struct dirent* nameList)
