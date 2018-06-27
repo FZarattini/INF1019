@@ -22,11 +22,9 @@
 char* getFileInformation(char* path);
 char* read_file(char* path, int *nrbytes, int offset);
 int write_file(char* path, char* payload, int nrbytes, int offset, char* client, char* ownerPerm, char* otherPerm);
-
 char* list_directories(char* path);
 char* create_directory(char* path, char* name, char* client, char* ownerPerm, char* otherPerm);
 char* remove_directory(char* path, char* name, char* client);
-
 char* getDirectory();
 int filter_files(const struct dirent* nameList);
 void error(char *msg);
@@ -35,34 +33,33 @@ int check_file (char* filename);
 
 char* runCommand(char* command)
 {
+	char* msgResposta[250];
 	char* params[10];
-	char* msgResposta[200];
 
-	int param_num = 0;
-	for(int i = 0; (params[i] = strsep(&command, " ")) != NULL; i++, param_num++)
+	int qtd_par = 0;
+	for(int i = 0; (params[i] = strsep(&command, " ")) != NULL; i++, qtd_par++)
 	{
 		if(i == 11)
-			
 			return "Erro: Muitos parâmetros!\n";
 	}
 
 
-    printf("Parâmetro %d\n", param_num);
+    printf("Parâmetro %d\n", qtd_par);
+	//Lê arquivo
 	if(!strcmp(params[0], "RD-REQ"))
 	{
-		if(param_num != 5)
+		if(qtd_par != 5)
 			return "Erro: Quantidade de parâmetros inválida!\n";
 
 		char* path = params[1];
-		char* payload;
 		int nrbytes = atoi(params[3]);
 		int offset = atoi(params[4]);
+		char* payload;
+		char bytes[20];
+		char* pathComplete = (char*)malloc(BUFFER * sizeof(char));
+		char pathSize[20];
 
-		char* fullpath = (char*)malloc(BUFFER * sizeof(char));
-		char lenPath[20];
-		char bt[20];
-
-		fullpath[0] = '\0';
+		pathComplete[0] = '\0';
 		
 		payload = read_file(path, &nrbytes, offset);
 		printf("Payload: %s\n", payload);
@@ -73,28 +70,28 @@ char* runCommand(char* command)
 			return NULL;
 		}
 
-		snprintf(lenPath, 20, "%lu", strlen(path));
-		snprintf(bt, 20, "%d", nrbytes);
+		snprintf(pathSize, 20, "%lu", strlen(path));
+		snprintf(bytes, 20, "%d", nrbytes);
 
-		strcpy(fullpath, "RD-REP ");
-		strcat(fullpath, path);
-		strcat(fullpath, " ");
-		strcat(fullpath, lenPath);
-		strcat(fullpath, " ");
-		strcat(fullpath, payload);
-		strcat(fullpath, " ");
-		strcat(fullpath, bt);
-		strcat(fullpath, " ");
-		strcat(fullpath, params[4]);
+		strcpy(pathComplete, "RD-REP ");
+		strcat(pathComplete, path);
+		strcat(pathComplete, " ");
+		strcat(pathComplete, pathSize);
+		strcat(pathComplete, " ");
+		strcat(pathComplete, payload);
+		strcat(pathComplete, " ");
+		strcat(pathComplete, bytes);
+		strcat(pathComplete, " ");
+		strcat(pathComplete, params[4]);
 
-		printf("Resposta: %s\n", fullpath);
+		printf("Resposta: %s\n", pathComplete);
 
-		return fullpath;
+		return pathComplete;
 	}
-	
+	//Escreve mensagem no arquivo
 	if(!strcmp(params[0], "WR-REQ"))
 	{
-		if(param_num != 9)
+		if(qtd_par != 9)
 			return "Erro: Quantidade de parâmetros inválida!\n";
 
 		char* path = params[1];
@@ -105,11 +102,11 @@ char* runCommand(char* command)
 		char* owner = params[7];
 		char* others = params[8];
 
-		char* fullpath = (char*)malloc(BUFFER * sizeof(char));
-		char lenPath[BUFFER];
-		char bt[BUFFER];
+		char* pathComplete = (char*)malloc(BUFFER * sizeof(char));
+		char pathSize[BUFFER];
+		char bytes[BUFFER];
 
-		fullpath[0] = '\0';
+		pathComplete[0] = '\0';
 		
 		nrbytes = write_file(path, payload, nrbytes, offset, client, owner, others);
 		printf("Quantidade de bytes escritos: %d\n", nrbytes);
@@ -124,23 +121,23 @@ char* runCommand(char* command)
 			return "Erro: Acesso negado!\n";
 		}
 
-		snprintf(lenPath, 20, "%lu", strlen(path));
-		snprintf(bt, 20, "%d", nrbytes);
+		snprintf(pathSize, 20, "%lu", strlen(path));
+		snprintf(bytes, 20, "%d", nrbytes);
 
-		strcpy(fullpath, "WR-REP ");
-		strcat(fullpath, path);
-		strcat(fullpath, " ");
-		strcat(fullpath, lenPath);
-		strcat(fullpath, " ");
-		strcat(fullpath, bt);
-		strcat(fullpath, " ");
-		strcat(fullpath, params[4]);
+		strcpy(pathComplete, "WR-REP ");
+		strcat(pathComplete, path);
+		strcat(pathComplete, " ");
+		strcat(pathComplete, pathSize);
+		strcat(pathComplete, " ");
+		strcat(pathComplete, bytes);
+		strcat(pathComplete, " ");
+		strcat(pathComplete, params[4]);
 
-		printf("Resposta: %s\n", fullpath);
+		printf("Resposta: %s\n", pathComplete);
 
-		return fullpath;
+		return pathComplete;
 	}
-	
+	//Retorna informações do arquivo
 	if(!strcmp(params[0], "FI-REQ"))
 	{
 		char* path = params[1];
@@ -159,10 +156,10 @@ char* runCommand(char* command)
 		
 		return rep;
 	}
-	
+	//Cria novo subdiretório
 	if(!strcmp(params[0], "DC-REQ"))
 	{
-		if(param_num != 7)
+		if(qtd_par != 7)
 			return "Erro: Quantidade de parâmetros inválida!\n";
 
 		char* path = params[1];
@@ -171,11 +168,11 @@ char* runCommand(char* command)
 		char* owner = params[5];
 		char* others = params[6];
 
-		char* fullpath = (char*)malloc(BUFFER * sizeof(char));
+		char* pathComplete = (char*)malloc(BUFFER * sizeof(char));
 		char* answer;
 		char  len[20];
 
-		fullpath[0] = '\0';
+		pathComplete[0] = '\0';
 		
 		answer = create_directory(path, name, client, owner, others);
 
@@ -186,28 +183,28 @@ char* runCommand(char* command)
 
 		snprintf(len, 20, "%lu", strlen(answer));
 
-		strcpy(fullpath, "DC-REP ");
-		strcat(fullpath, answer);
-		strcat(fullpath, " ");
-		strcat(fullpath, len);
+		strcpy(pathComplete, "DC-REP ");
+		strcat(pathComplete, answer);
+		strcat(pathComplete, " ");
+		strcat(pathComplete, len);
 		
-		return fullpath;
+		return pathComplete;
 	}
-
+	//Remove subdiretório
 	if(!strcmp(params[0], "DR-REQ"))
 	{
-		if(param_num != 6)
+		if(qtd_par != 6)
 			return "Erro: Quantidade de parâmetros inválida!\n";
 
 		char* path   = params[1];
 		char* name   = params[3];
 		char* client = params[5];
 
-		char* fullpath = (char*)malloc(BUFFER * sizeof(char));
+		char* pathComplete = (char*)malloc(BUFFER * sizeof(char));
 		char* answer;
 		char  len[20];
 
-		fullpath[0] = '\0';
+		pathComplete[0] = '\0';
 
 		answer = remove_directory(path, name, client);
 
@@ -224,14 +221,14 @@ char* runCommand(char* command)
 
 		printf("Tamanho do caminho do diretório: %s\n", len);
 		
-		strcpy(fullpath, "DR-REP ");
-		strcat(fullpath, path);
-		strcat(fullpath, " ");
-		strcat(fullpath, len);
+		strcpy(pathComplete, "DR-REP ");
+		strcat(pathComplete, path);
+		strcat(pathComplete, " ");
+		strcat(pathComplete, len);
 
-		return fullpath;
+		return pathComplete;
 	}
-
+ 	//Retorna nome dos subdiretórios
 	if(!strcmp(params[0], "DL-REQ"))
 	{
 		char* path = params[1];
@@ -288,11 +285,11 @@ int write_file(char* path, char* payload, int nrbytes, int offset, char* client,
 
 	//Client
 	char* pathdup = strdup(path);
-	char pathWithDot[BUFFER];
-	char* nameWithDot;
+	char execPath[BUFFER];
+	char* execName;
 	char* name;
 	char* aux;
-	char* fileBuf = (char*)malloc(BUFSIZE * sizeof(char));
+	char* fBuffer = (char*)malloc(BUFSIZE * sizeof(char));
 	int clientDescriptor;
 	int rw;
 
@@ -300,35 +297,35 @@ int write_file(char* path, char* payload, int nrbytes, int offset, char* client,
 
 
 	while((aux = strsep(&pathdup, "/")) != NULL) name = aux;
-	nameWithDot = (char*)malloc((strlen(name)+2)*sizeof(char));
-	strcpy(nameWithDot, ".");
-	strcat(nameWithDot, name);
-	strcpy(pathWithDot, path);
-	pathWithDot[strlen(pathWithDot) - strlen(name)] = '\0';
+	execName = (char*)malloc((strlen(name)+2)*sizeof(char));
+	strcpy(execName, ".");
+	strcat(execName, name);
+	strcpy(execPath, path);
+	execPath[strlen(execPath) - strlen(name)] = '\0';
 
-	strcpy(dirPath, pathWithDot);
+	strcpy(dirPath, execPath);
 	strcat(dirPath, ".directory");
 
-	strcat(pathWithDot, nameWithDot);
+	strcat(execPath, execName);
 
-	strcpy(fileBuf, client);
-	strcat(fileBuf, " ");
-	strcat(fileBuf, ownerPerm);
-	strcat(fileBuf, " ");
-	strcat(fileBuf, otherPerm);
+	strcpy(fBuffer, client);
+	strcat(fBuffer, " ");
+	strcat(fBuffer, ownerPerm);
+	strcat(fBuffer, " ");
+	strcat(fBuffer, otherPerm);
 
-	printf("path: %s / pathWithDot: %s / name: %s / dirPath: %s\n ", path, pathWithDot, name, dirPath);
+	printf("path: %s / execPath: %s / name: %s / dirPath: %s\n ", path, execPath, name, dirPath);
 
-	char* dirBufAux = (char*)malloc(BUFSIZE * sizeof(char));
+	char* dBuffer = (char*)malloc(BUFSIZE * sizeof(char));
 
 	int dirDescriptor = open(dirPath, O_RDONLY);
-	rw = pread(dirDescriptor, dirBufAux, 10, 0);
+	rw = pread(dirDescriptor, dBuffer, 10, 0);
 	if(rw > 0) {
-		printf("Lendo arquivo de auth: %d / valor: %s\n", rw, dirBufAux);
+		printf("Lendo arquivo de auth: %d / valor: %s\n", rw, dBuffer);
 
 		char* params[3];
 
-		for(int i = 0; (params[i] = strsep(&dirBufAux, " ")) != NULL; i++);
+		for(int i = 0; (params[i] = strsep(&dBuffer, " ")) != NULL; i++);
 
 		if (params[2][0] == 'R') {
 			if(strcmp(params[0], client) != 0) {
@@ -343,20 +340,20 @@ int write_file(char* path, char* payload, int nrbytes, int offset, char* client,
 	{
 		descriptor = open(path, O_WRONLY | O_CREAT, 0666);
 
-		clientDescriptor = open(pathWithDot, O_RDWR | O_CREAT, 0666);
-		rw = pwrite(clientDescriptor, fileBuf, strlen(fileBuf), 0);
+		clientDescriptor = open(execPath, O_RDWR | O_CREAT, 0666);
+		rw = pwrite(clientDescriptor, fBuffer, strlen(fBuffer), 0);
 		close(clientDescriptor);
 
-		printf("Escrevendo arquivo de auth: %d\n", rw);
-		free(fileBuf);
+		printf("Escrevendo em arquivo: %d\n", rw);
+		free(fBuffer);
 	}
 	else
 	{
 		char* fileBufAux = (char*)malloc(BUFSIZE * sizeof(char));
 
 		descriptor = open(path, O_WRONLY);
-		clientDescriptor = open(pathWithDot, O_RDONLY);
-		rw = pread(clientDescriptor, fileBufAux, 2*strlen(fileBuf), 0);
+		clientDescriptor = open(execPath, O_RDONLY);
+		rw = pread(clientDescriptor, fileBufAux, 2*strlen(fBuffer), 0);
 		printf("Lendo arquivo de auth: %d / valor: %s\n", rw, fileBufAux);
 
 		close(clientDescriptor);
@@ -378,7 +375,7 @@ int write_file(char* path, char* payload, int nrbytes, int offset, char* client,
 		{
 			printf("Error deleting file: %s\n", path);
 		}
-		remove(pathWithDot);
+		remove(execPath);
 
 		return 0;
 	}
@@ -399,12 +396,13 @@ int write_file(char* path, char* payload, int nrbytes, int offset, char* client,
 	return written;
 }
 
+//Retorna as informações do arquivo pedido
 char* getFileInformation(char* path)
 {
 	//Client
 	char* pathdup = strdup(path);
-	char pathWithDot[BUFFER];
-	char* nameWithDot;
+	char execPath[BUFFER];
+	char* execName;
 	char* name;
 	char* aux;
 	int clientDescriptor;
@@ -412,23 +410,23 @@ char* getFileInformation(char* path)
 	//int descriptor;
 
 	while((aux = strsep(&pathdup, "/")) != NULL) name = aux;
-	nameWithDot = (char*)malloc((strlen(name)+2)*sizeof(char));
-	strcpy(nameWithDot, ".");
-	strcat(nameWithDot, name);
-	strcpy(pathWithDot, path);
-	pathWithDot[strlen(pathWithDot) - strlen(name)] = '\0';
-	strcat(pathWithDot, nameWithDot);
+	execName = (char*)malloc((strlen(name)+2)*sizeof(char));
+	strcpy(execName, ".");
+	strcat(execName, name);
+	strcpy(execPath, path);
+	execPath[strlen(execPath) - strlen(name)] = '\0';
+	strcat(execPath, execName);
 
 	char* fileBufAux = (char*)malloc(BUFSIZE * sizeof(char));
 
-	printf("%d\n", strcmp(pathWithDot, "./newDir/.teste.txt"));
+	printf("%d\n", strcmp(execPath, "./newDir/.teste.txt"));
 
-	if(pathWithDot[strlen(pathWithDot)] == '\n') {
+	if(execPath[strlen(execPath)] == '\n') {
 		printf("bananas\n"); //Debug, apagar depois
 	}
 	
 
-	clientDescriptor = open(pathWithDot, O_RDONLY);
+	clientDescriptor = open(execPath, O_RDONLY);
 	rw = pread(clientDescriptor, fileBufAux, 10, 0);
 	close(clientDescriptor);
 
@@ -454,56 +452,58 @@ char* getFileInformation(char* path)
 	return ret;
 }
 
+//Cria um subdiretório no diretório corrente
 char* create_directory(char* path, char* name, char* client, char* ownerPerm, char* otherPerm)
 {
 	struct stat st = {0};
-	char* fullpath = (char*)malloc((strlen(path) + strlen(name) + 1) * sizeof(char));
+	char* pathComplete = (char*)malloc((strlen(path) + strlen(name) + 1) * sizeof(char));
 	char* authPath;
-	char* fileBuf = (char*)malloc(BUFSIZE * sizeof(char));
+	char* fBuffer = (char*)malloc(BUFSIZE * sizeof(char));
 	mode_t permissao = S_IRWXU | S_IROTH | S_IWOTH | S_IXOTH;
 	int descriptor;
 
-	printf("create_directory -- path: %s, name: %s, fullpath: %s\n", path, name, fullpath);
+	printf("create_directory -- path: %s, name: %s, pathComplete: %s\n", path, name, pathComplete);
 
-	strcpy(fullpath, path);
-	strcat(fullpath, "/");
-	strcat(fullpath, name);
+	strcpy(pathComplete, path);
+	strcat(pathComplete, "/");
+	strcat(pathComplete, name);
 
-	authPath = strdup(fullpath);
+	authPath = strdup(pathComplete);
 	strcat(authPath, "/.directory");
 
-	if (stat(fullpath, &st) == -1) 
+	if (stat(pathComplete, &st) == -1) 
 	{
-		if (mkdir(fullpath, permissao) != 0)
+		if (mkdir(pathComplete, permissao) != 0)
 		{
-			printf("Error in mkdir\n");
+			printf("Erro ao tentar criar diretório!\n");
 			return NULL;
 		}
 	}
 	else 
 	{
-		printf("Stat error\n");
+		printf("Erro ao receber stats!\n");
 		return NULL;
 	}
 
-	strcpy(fileBuf, client);
-	strcat(fileBuf, " ");
-	strcat(fileBuf, ownerPerm);
-	strcat(fileBuf, " ");
-	strcat(fileBuf, otherPerm);
+	strcpy(fBuffer, client);
+	strcat(fBuffer, " ");
+	strcat(fBuffer, ownerPerm);
+	strcat(fBuffer, " ");
+	strcat(fBuffer, otherPerm);
 
-	printf("Buffer: %s\n", fileBuf);
+	printf("Buffer: %s\n", fBuffer);
 
 	descriptor = open(authPath, O_WRONLY | O_CREAT, 0666);
-	pwrite(descriptor, fileBuf, strlen(fileBuf), 0);
+	pwrite(descriptor, fBuffer, strlen(fBuffer), 0);
 	close(descriptor);
 
-	return fullpath;
+	return pathComplete;
 }
 
+//Remove um diretório
 char* remove_directory(char* path, char* name, char* client)
 {
-	char* fullpath = (char*)malloc((strlen(path) + strlen(name) + 1) * sizeof(char));
+	char* pathComplete = (char*)malloc((strlen(path) + strlen(name) + 1) * sizeof(char));
 
 	//Client
 	char* buf = (char*)malloc(BUFSIZE*sizeof(char));
@@ -538,24 +538,25 @@ char* remove_directory(char* path, char* name, char* client)
 	free(auth);
 	//
 
-	printf("remove_directory -- path: %s, name: %s\n", path, name);
+	printf("Removendo diretório -- path: %s, nome: %s\n", path, name);
 
-	strcpy(fullpath, path);
-	strcat(fullpath, "/");
-	strcat(fullpath, name);
+	strcpy(pathComplete, path);
+	strcat(pathComplete, "/");
+	strcat(pathComplete, name);
 
-	printf("fullpath: %s\n", fullpath);
+	printf("Path: %s\n", pathComplete);
 
-	if (delete_everything(fullpath) != -1)
-		return fullpath;
+	if (delete_everything(pathComplete) != -1)
+		return pathComplete;
 	
-	printf("Erro remover diretorio!\n");
+	printf("Erro ao tentar remover diretório!\n");
 	return NULL;
 }
 
+//Lista os nomes dos diretórios a partir do diretório corrente
 char* list_directories(char* path)
 {
-	char* fullpath = getDirectory();
+	char* pathComplete = getDirectory();
 	int count;
 	struct dirent** nameList;
 	char* ret = malloc(BUFSIZE*(sizeof(char))); ret[0] = '\0';
@@ -563,11 +564,11 @@ char* list_directories(char* path)
 	printf("list_directories -- path: %s\n", path);
 
 	if(path[1] == '/')
-		strcat(fullpath, &path[1]);
+		strcat(pathComplete, &path[1]);
 
-	printf("%s\n", fullpath);
+	printf("%s\n", pathComplete);
 
-	count = scandir(fullpath, &nameList, filter_files, alphasort);
+	count = scandir(pathComplete, &nameList, filter_files, alphasort);
 	//quantidade de arquivos no diretorio
 
 	printf("%d\n", count);
@@ -584,6 +585,7 @@ char* list_directories(char* path)
 	return ret;
 }
 
+//Retorna o diretório corrente
 char* getDirectory()
 {
 	char* currentDir = (char*)malloc(BUFFER*sizeof(char)) ;
@@ -615,7 +617,7 @@ int check_file (char* filename)
   return stat(filename, &buffer) == 0;
 }
 
-int delete_everything(const char *dir) //talvez suma
+int delete_everything(const char *dir)
 {
     int ret = 0;
     FTS *ftsp = NULL;
