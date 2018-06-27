@@ -1,0 +1,38 @@
+Alunos:
+Felipe Zarattini Miranda - 1220557
+Erick Macedo Pinto - 1112114
+
+O trabalho consiste em implementar uma comunicação entre um cliente e um servidor através de uma porta. O cliente faz requisições ao servidor através de comandos para manipular e receber informações sobre o sistema de diretórios. O servidor então interpreta esses comandos, executa o que está sendo pedido e envia uma resposta ao cliente.
+O programa consiste em dois módulos (client.c e server.c), que são versões modificadas dos módulos (udpcliente.c e udpservidor.c) passados no enunciado do trabalho. A pasta do trabalho contém o módulo cliente client.c, este relatório e um diretório (SFS-root-dir) raiz. O diretório SFS-root-dir contém o módulo servidor server.c.
+
+Compilação:
+$gcc -o server server.c
+$gcc -o client client.c
+
+Eecução:
+Terminal 1:
+./server 1456 &
+
+Terminal
+./client localhost 1456
+
+Requisições realizadas no teste:
+
+DL-REQ . 1
+DC-REQ . 1 newDir 2 W R
+DL-REQ . 1
+WR-REQ ./newDir/teste.txt 12 teste 5 10 1 W W
+WR-REQ ./newDir/teste.txt 12 testando 8 10 2 W W
+DL-REQ ./newDir 5
+WR-REQ ./newDir/teste.txt 12 dvaorisareinhardtroadhogwinstonzaryabastiondoomfistgenjihanzojunkrat 68 10 2 W W
+RD-REQ ./newDir/teste.txt 12 25 0
+FI-REQ ./newDir/teste.txt 12
+DC-REQ ./newDir 1 anotherDir 2 W R
+WR-REQ ./newDir/anotherDir/teste2.txt 12 teste 5 10 2 W W
+FI-REQ ./newDir/anotherDir/teste2.txt 12
+DL-REQ ./newDir/anotherDir 14
+DR-REQ . 1 newDir 6 1
+DR-REQ . 1 newDir 6 2
+
+Problemas encontrados:
+O comando DR-REQ não está funcionando como esperado.
